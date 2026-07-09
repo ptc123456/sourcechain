@@ -115,40 +115,84 @@ export default function HomePage() {
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────── */}
-      <section className="hero section">
+      <section className="hero section" style={{ padding: '80px 0 40px 0' }}>
+        <div className="container grid-2" style={{ alignItems: 'center', textAlign: 'left', gap: 48 }}>
+          <div className="hero-content">
+            <div className="hero-badge animate-in">
+              <span className="dot" />
+              Powered by GenLayer AI Consensus
+            </div>
+
+            <h1 className="animate-in animate-in-delay-1" style={{ margin: '0 0 16px 0', textAlign: 'left' }}>
+              Journalism That&apos;s{' '}
+              <span className="gradient-text">Impossible to Fake</span>
+            </h1>
+
+            <p className="animate-in animate-in-delay-2" style={{ margin: '0 0 36px 0', textAlign: 'left', maxWidth: 'none' }}>
+              SourceChain verifies every citation in real-time — fetching source URLs directly
+              on the blockchain, running LLM fact-checking, and recording immutable verdicts.
+              No trusted third party. No compromise.
+            </p>
+
+            <div className="hero-actions animate-in animate-in-delay-3" style={{ justifyContent: 'flex-start' }}>
+              <Link href="/submit" className="btn btn-primary btn-lg" id="hero-submit-btn">
+                🔍 Verify Your Article
+              </Link>
+              <a
+                href="https://genlayer.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-lg"
+                id="hero-genlayer-btn"
+              >
+                What is GenLayer?
+              </a>
+            </div>
+          </div>
+
+          {/* Floating Validation Card Mockup */}
+          <div className="hero-visual animate-in animate-in-delay-2" style={{ position: 'relative' }}>
+            <div className="card card-body" style={{ border: '1px solid var(--border-active)', boxShadow: 'var(--shadow-hover)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <span className="badge badge-verified">✓ Active Audit</span>
+                <span className="mono" style={{ color: 'var(--text-accent)', fontSize: '0.75rem' }}>Node #12_Validator</span>
+              </div>
+              
+              <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', padding: 14, marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.775rem', marginBottom: 8 }} className="mono">
+                  <span style={{ fontWeight: 600 }}>url_render() consensus</span>
+                  <span className="text-verified">SUCCESS (3/3 votes)</span>
+                </div>
+                <pre className="mono" style={{ fontSize: '0.725rem', color: 'var(--text-secondary)', overflowX: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                  {`GET https://nasa.gov/arctic-ice-2026\n=> Status: 200 OK\n=> SHA256 matches on-chain submit_hash`}
+                </pre>
+              </div>
+
+              <div className="score-meter" style={{ marginBottom: 12 }}>
+                <div className="score-label">
+                  <span>Source Citation Match</span>
+                  <span className="text-verified" style={{ fontWeight: 'bold' }}>95%</span>
+                </div>
+                <div className="score-track">
+                  <div className="score-fill good" style={{ width: '95%' }} />
+                </div>
+              </div>
+
+              <div className="score-meter">
+                <div className="score-label">
+                  <span>AI Hallucination Risk</span>
+                  <span className="text-verified" style={{ fontWeight: 'bold' }}>8%</span>
+                </div>
+                <div className="score-track">
+                  <div className="score-fill good" style={{ width: '8%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Strip */}
         <div className="container">
-          <div className="hero-badge animate-in">
-            <span className="dot" />
-            Powered by GenLayer AI Consensus
-          </div>
-
-          <h1 className="animate-in animate-in-delay-1">
-            Journalism That&apos;s{' '}
-            <span className="gradient-text">Impossible to Fake</span>
-          </h1>
-
-          <p className="animate-in animate-in-delay-2">
-            SourceChain verifies every citation in real-time — fetching source URLs directly
-            on the blockchain, running LLM fact-checking, and recording immutable verdicts.
-            No trusted third party. No compromise.
-          </p>
-
-          <div className="hero-actions animate-in animate-in-delay-3">
-            <Link href="/submit" className="btn btn-primary btn-lg" id="hero-submit-btn">
-              🔍 Verify Your Article
-            </Link>
-            <a
-              href="https://genlayer.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary btn-lg"
-              id="hero-genlayer-btn"
-            >
-              What is GenLayer?
-            </a>
-          </div>
-
-          {/* Stats */}
           <div className="stats-strip animate-in" style={{ marginTop: 64 }}>
             <div className="stat-item">
               <div className="stat-value gradient-text">{verifiedCount}</div>
@@ -170,41 +214,74 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── How it works ────────────────────────────────── */}
+      {/* ── Bento Features Section ──────────────────────── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
             <p className="section-title">Why GenLayer Changes Everything</p>
             <h2>Only GenLayer Can Do This</h2>
           </div>
-          <div className="grid-3">
-            {[
-              {
-                icon: '🌐',
-                title: 'Live URL Fetching',
-                desc: 'Reads actual source URLs from the internet during contract execution. Ethereum cannot do this.',
-              },
-              {
-                icon: '🤖',
-                title: 'On-Chain LLM Analysis',
-                desc: 'Runs semantic citation analysis using exec_prompt — comparing article claims to real source content.',
-              },
-              {
-                icon: '⚡',
-                title: 'Consensus Verdicts',
-                desc: 'Multiple validators independently verify and must agree. No single point of manipulation.',
-              },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className={`card card-body animate-in animate-in-delay-${i + 1}`}
-                style={{ textAlign: 'center' }}
-              >
-                <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>{item.icon}</div>
-                <h3 style={{ marginBottom: 8, fontSize: '1.1rem' }}>{item.title}</h3>
-                <p className="text-sm text-muted" style={{ lineHeight: 1.6 }}>{item.desc}</p>
+
+          <div className="bento-grid">
+            {/* Cell 1: Spans 7 columns */}
+            <div className="card card-body bento-cell-large animate-in animate-in-delay-1" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 16 }}>🌐</div>
+              <h3 style={{ marginBottom: 12, fontSize: '1.25rem' }}>Decentralized Live URL Fetching</h3>
+              <p className="text-sm text-secondary" style={{ lineHeight: 1.6 }}>
+                Reads and renders actual source URLs from the internet directly during smart contract execution. 
+                GenLayer validators use WASI secure sandboxes to reach consensus on real-time web content, 
+                completely bypassing the limitations of traditional deterministic blockchains.
+              </p>
+            </div>
+
+            {/* Cell 2: Spans 5 columns */}
+            <div className="card card-body bento-cell-medium animate-in animate-in-delay-2" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: 16 }}>🤖</div>
+              <h3 style={{ marginBottom: 12, fontSize: '1.25rem' }}>On-Chain LLM Semantic Verdicts</h3>
+              <p className="text-sm text-secondary" style={{ lineHeight: 1.6 }}>
+                Executes secure prompt-consensus cycles inside the contract validation phase. 
+                Compares article claims semantically against web evidence, detecting context manipulations 
+                and AI-generated hallucination threats instantly.
+              </p>
+            </div>
+
+            {/* Cell 3: Spans 12 columns (Full-width details) */}
+            <div className="card card-body bento-cell-full animate-in animate-in-delay-3" style={{ background: 'rgba(255,255,255,0.015)' }}>
+              <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ flex: '1 1 320px' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 16 }}>⚡</div>
+                  <h3 style={{ marginBottom: 12, fontSize: '1.25rem' }}>No-Trust Consensus Verification Pipeline</h3>
+                  <p className="text-sm text-secondary" style={{ lineHeight: 1.6, marginBottom: 16 }}>
+                    Instead of relying on a single validator, GenLayer selects multiple validator nodes to perform the audit in parallel. 
+                    Verdicts are recorded permanently to the blockchain ledger only after validator nodes match consensus bounds.
+                  </p>
+                  <div style={{ display: 'flex', gap: 12 }} className="mono">
+                    <span className="badge badge-verified">No central control</span>
+                    <span className="badge badge-verified">Immutable records</span>
+                  </div>
+                </div>
+                <div style={{ flex: '1 1 320px', background: 'rgba(0,0,0,0.2)', padding: 20, borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
+                  <div className="mono text-[10px]" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-accent)', marginBottom: 12 }}>
+                    <span>VALIDATOR MATRIX CONSENSUS</span>
+                    <span className="animate-pulse">● ACTIVE</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} className="mono text-xs">
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Validator Node #1</span>
+                      <span className="text-verified">✓ AGREE (verified)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Validator Node #2</span>
+                      <span className="text-verified">✓ AGREE (verified)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Validator Node #3</span>
+                      <span className="text-verified">✓ AGREE (verified)</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>

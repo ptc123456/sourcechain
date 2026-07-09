@@ -3,7 +3,7 @@
    Premium Dark Glassmorphism & High-Fidelity Typography
    ===================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
 
 :root {
   /* Premium Dark Palette */
@@ -184,6 +184,29 @@ p {
   .section { padding: 64px 0; }
 }
 
+/* Bento Grid System */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+.bento-cell-large {
+  grid-column: span 7;
+}
+.bento-cell-medium {
+  grid-column: span 5;
+}
+.bento-cell-full {
+  grid-column: span 12;
+}
+
+@media (max-width: 992px) {
+  .bento-cell-large,
+  .bento-cell-medium {
+    grid-column: span 12;
+  }
+}
+
 /* ── Premium Glass Cards ────────────────────────────── */
 .card {
   background: var(--glass-bg);
@@ -351,6 +374,12 @@ textarea.form-control {
               box-shadow var(--duration-fast) var(--ease-smooth);
   text-decoration: none;
   white-space: nowrap;
+  outline: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--border-glow);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -757,6 +786,15 @@ textarea.form-control {
 
 .article-card:hover::before { opacity: 1; }
 
+.article-card:active {
+  transform: translateY(-1px) scale(0.985);
+}
+
+.article-card:focus-visible {
+  outline: 2px solid var(--border-glow);
+  outline-offset: 2px;
+}
+
 .article-card-header {
   display: flex;
   align-items: flex-start;
@@ -956,5 +994,27 @@ textarea.form-control {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in {
+    transform: none !important;
+    animation: fade-only 0.3s ease-out forwards !important;
+  }
+  body::after {
+    animation: none !important;
+  }
+  .spinner {
+    animation: none !important;
+  }
+  .consensus-orb {
+    animation: none !important;
+  }
+}
+
+@keyframes fade-only {
+  to {
+    opacity: 1;
   }
 }

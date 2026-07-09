@@ -21,9 +21,9 @@ export default function ArticleCard({ verification, animate = true, index = 0 }:
       case 'REJECTED':
         return <span className="badge badge-rejected">✗ Rejected</span>;
       case 'CHALLENGED':
-        return <span className="badge badge-challenged">⚑ Challenged</span>;
+        return <span className="badge badge-challenged">✦ Challenged</span>;
       case 'PENDING':
-        return <span className="badge badge-pending">⏳ Pending</span>;
+        return <span className="badge badge-pending">● Pending</span>;
       default:
         return null;
     }
