@@ -1,74 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { connectWallet, disconnectWallet, shortAddress, fundAccount, getWalletAddress, setWalletAddress } from '@/lib/genlayer';
+import React, { useState } from 'react';
+import { useWallet } from '@/components/WalletProvider';
+import { shortAddress, fundAccount } from '@/lib/genlayer';
 
-interface WalletConnectProps {
-  onConnect?: (address: string) => void;
-  onDisconnect?: () => void;
-}
-
-export default function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
-  const [address, setAddress] = useState<string | null>(() => getWalletAddress());
-  const [connecting, setConnecting] = useState(false);
+export default function WalletConnect() {
+  const { address, isInitializing, isConnecting, connect, disconnect } = useWallet();
   const [showMenu, setShowMenu] = useState(false);
   const [funding, setFunding] = useState(false);
   const [fundMsg, setFundMsg] = useState('');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        setAddress(current => {
-          if (accounts.length > 0 && current) {
-            const newAddr = accounts[0];
-            setWalletAddress(newAddr);
-            localStorage.setItem('sc_wallet', newAddr);
-            onConnect?.(newAddr);
-            return newAddr;
-          } else if (accounts.length === 0) {
-            setWalletAddress(null);
-            localStorage.removeItem('sc_wallet');
-            onDisconnect?.();
-            return null;
-          }
-          return current;
-        });
-      };
-
-      const handleChainChanged = () => {
-        window.location.reload();
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-          window.ethereum.removeListener('chainChanged', handleChainChanged);
-        }
-      };
-    }
-  }, [onConnect, onDisconnect]);
-
   async function handleConnect() {
-    setConnecting(true);
     try {
-      const addr = await connectWallet();
-      setAddress(addr);
-      onConnect?.(addr);
+      await connect();
     } catch (e) {
       console.error('Wallet connect failed:', e);
-    } finally {
-      setConnecting(false);
     }
   }
 
   async function handleDisconnect() {
-    await disconnectWallet();
-    setAddress(null);
+    await disconnect();
     setShowMenu(false);
-    onDisconnect?.();
   }
 
   async function handleFund() {
@@ -88,17 +40,31 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
     }
   }
 
+  if (isInitializing) {
+    return (
+      <button
+        id="wallet-connect-btn"
+        className="wallet-btn"
+        disabled
+        aria-label="Loading wallet connection"
+      >
+        <span className="spinner" style={{ width: 12, height: 12 }} />
+        Loading…
+      </button>
+    );
+  }
+
   if (!address) {
     return (
       <button
         id="wallet-connect-btn"
         className="wallet-btn"
         onClick={handleConnect}
-        disabled={connecting}
+        disabled={isConnecting}
         aria-label="Connect Wallet"
       >
         <span className="wallet-indicator" />
-        {connecting ? (
+        {isConnecting ? (
           <>
             <span className="spinner" style={{ width: 12, height: 12 }} />
             Connecting…

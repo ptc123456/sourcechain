@@ -40,7 +40,7 @@ function ScoreBox({
 }
 
 export default function VerificationReport({ verification, txHash }: VerificationReportProps) {
-  const { article_id, article_title, status, author_address, verification: v, article_hash } = verification;
+  const { article_id, status, author_address, verification: v, article_hash } = verification;
 
   if (!v) {
     return (

@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import LoadingConsensus from '@/components/LoadingConsensus';
 import { challengeArticle, getVerification, type ArticleVerification, REGISTRY_ADDRESS } from '@/lib/contracts';
-import { getTxExplorerUrl, getWalletAddress, setWalletAddress as setGlobalWalletAddress } from '@/lib/genlayer';
+import { getTxExplorerUrl } from '@/lib/genlayer';
+import { useWallet } from '@/components/WalletProvider';
 
 type ChallengeStage = 'form' | 'processing' | 'done' | 'error';
 
@@ -15,7 +16,8 @@ export default function ChallengePage() {
 
   const [article, setArticle]         = useState<ArticleVerification | null>(null);
   const [loadingArticle, setLoadingArticle] = useState(true);
-  const [walletAddress, setWalletAddress]   = useState<string | null>(() => getWalletAddress());
+
+  const { address, isInitializing } = useWallet();
 
   const [evidenceUrl, setEvidenceUrl]       = useState('');
   const [stage, setStage]                   = useState<ChallengeStage>('form');
@@ -23,24 +25,6 @@ export default function ChallengePage() {
   const [challengeVerdict, setChallengeVerdict] = useState('');
   const [errorMsg, setErrorMsg]             = useState('');
   const [elapsed, setElapsed]               = useState(0);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        const newAddr = accounts[0] || null;
-        setGlobalWalletAddress(newAddr);
-        setWalletAddress(newAddr);
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-
-      return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
-    }
-  }, []);
 
   useEffect(() => {
     async function loadArticle() {
@@ -85,7 +69,7 @@ export default function ChallengePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!walletAddress) {
+    if (!address) {
       setErrorMsg('Please connect your wallet first.');
       setStage('error');
       return;
@@ -102,7 +86,7 @@ export default function ChallengePage() {
       const timer = setInterval(() => setElapsed(e => e + 1), 1000);
 
       try {
-        const tx = await challengeArticle(articleId, walletAddress, evidenceUrl);
+        const tx = await challengeArticle(articleId, address, evidenceUrl);
         setTxHash(tx);
 
         const updated = await getVerification(articleId);
@@ -228,56 +212,65 @@ export default function ChallengePage() {
         {stage !== 'processing' && stage !== 'done' && (
           <form onSubmit={handleSubmit} className="animate-in animate-in-delay-1" id="challenge-form">
             <div className="card card-body">
-              {!walletAddress && (
-                <div className="error-banner mb-6" role="alert">
-                  <span>🔒</span>
-                  <p>Connect your wallet to submit a challenge.</p>
+              {isInitializing ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>
+                  <span className="spinner" style={{ display: 'inline-block', marginBottom: 8 }} />
+                  <p>Verifying wallet connection state…</p>
                 </div>
+              ) : (
+                <>
+                  {!address && (
+                    <div className="error-banner mb-6" role="alert">
+                      <span>🔒</span>
+                      <p>Connect your wallet to submit a challenge.</p>
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="evidence-url">Evidence URL</label>
+                    <p className="form-hint">
+                      A URL that directly contradicts or disproves claims in the original article.
+                      The AI will fetch this URL and compare it against the article.
+                    </p>
+                    <input
+                      id="evidence-url"
+                      type="url"
+                      className="form-control"
+                      placeholder="https://credible-source.com/contradicting-evidence"
+                      value={evidenceUrl}
+                      onChange={e => setEvidenceUrl(e.target.value)}
+                      required
+                      style={{ marginTop: 8 }}
+                    />
+                  </div>
+
+                  {/* Warning */}
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      background: 'rgba(245,158,11,0.07)',
+                      border: '1px solid rgba(245,158,11,0.2)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.825rem',
+                      color: 'var(--text-secondary)',
+                      marginBottom: 24,
+                    }}
+                  >
+                    <strong style={{ color: 'var(--challenged)' }}>⚠ Note:</strong> Only submit
+                    challenges backed by credible evidence. Frivolous challenges may result in
+                    a penalty to your own stake.
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-danger w-full"
+                    id="submit-challenge-btn"
+                    disabled={!address || !evidenceUrl}
+                  >
+                    ⚑ Submit Challenge
+                  </button>
+                </>
               )}
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="evidence-url">Evidence URL</label>
-                <p className="form-hint">
-                  A URL that directly contradicts or disproves claims in the original article.
-                  The AI will fetch this URL and compare it against the article.
-                </p>
-                <input
-                  id="evidence-url"
-                  type="url"
-                  className="form-control"
-                  placeholder="https://credible-source.com/contradicting-evidence"
-                  value={evidenceUrl}
-                  onChange={e => setEvidenceUrl(e.target.value)}
-                  required
-                  style={{ marginTop: 8 }}
-                />
-              </div>
-
-              {/* Warning */}
-              <div
-                style={{
-                  padding: '14px 16px',
-                  background: 'rgba(245,158,11,0.07)',
-                  border: '1px solid rgba(245,158,11,0.2)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.825rem',
-                  color: 'var(--text-secondary)',
-                  marginBottom: 24,
-                }}
-              >
-                <strong style={{ color: 'var(--challenged)' }}>⚠ Note:</strong> Only submit
-                challenges backed by credible evidence. Frivolous challenges may result in
-                a penalty to your own stake.
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-danger w-full"
-                id="submit-challenge-btn"
-                disabled={!walletAddress || !evidenceUrl}
-              >
-                ⚑ Submit Challenge
-              </button>
             </div>
           </form>
         )}

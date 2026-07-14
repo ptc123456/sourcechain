@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import VerificationReport from '@/components/VerificationReport';
 import { getVerification, type ArticleVerification, REGISTRY_ADDRESS } from '@/lib/contracts';
@@ -32,7 +32,6 @@ const DEMO_DATA: Record<string, ArticleVerification> = {
 export default function ArticlePage() {
   const params = useParams<{ id: string }>();
   const articleId = params.id;
-  const router = useRouter();
 
   const [data, setData]       = useState<ArticleVerification | null>(null);
   const [loading, setLoading] = useState(true);

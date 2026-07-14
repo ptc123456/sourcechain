@@ -6,9 +6,17 @@
 
 import { createClient, chains } from 'genlayer-js';
 
+interface EIP1193Provider {
+  request: (args: { method: string; params?: unknown }) => Promise<unknown>;
+  on(event: 'accountsChanged', listener: (accounts: string[]) => void): void;
+  on(event: 'chainChanged', listener: (chainId: string) => void): void;
+  removeListener(event: 'accountsChanged', listener: (accounts: string[]) => void): void;
+  removeListener(event: 'chainChanged', listener: (chainId: string) => void): void;
+}
+
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: EIP1193Provider;
   }
 }
 
@@ -46,7 +54,7 @@ export async function getAuthenticatedWriteClient() {
     throw new Error('No compatible browser wallet detected.');
   }
 
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+  const accounts = (await window.ethereum.request({ method: 'eth_accounts' })) as string[];
   const address = accounts?.[0];
   if (!address) {
     throw new Error('Wallet authorization expired. Please reconnect your wallet.');
@@ -79,7 +87,7 @@ export async function connectWallet(): Promise<string> {
   }
 
   // Request accounts from the browser extension
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+  const accounts = (await window.ethereum.request({ method: 'eth_requestAccounts' })) as string[];
   if (!accounts || accounts.length === 0) {
     throw new Error('No accounts found in your wallet extension.');
   }
@@ -96,9 +104,10 @@ export async function connectWallet(): Promise<string> {
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: chainIdHex }],
     });
-  } catch (switchError: any) {
+  } catch (switchError: unknown) {
+    const err = switchError as { code?: number };
     // Code 4902 indicates the chain has not been added to MetaMask
-    if (switchError.code === 4902) {
+    if (err.code === 4902) {
       try {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
@@ -126,7 +135,9 @@ export async function connectWallet(): Promise<string> {
 export async function fundAccount(address: string, amount: number = 10): Promise<string> {
   const client = getClient();
   try {
-    const txHash = await (client as any).request({
+    const txHash = await (client as unknown as {
+      request: (args: { method: string; params: unknown[] }) => Promise<unknown>;
+    }).request({
       method: 'sim_fundAccount',
       params: [address as `0x${string}`, amount],
     });

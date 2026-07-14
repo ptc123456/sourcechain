@@ -1,29 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import SubmitForm from '@/components/SubmitForm';
-import { getWalletAddress, setWalletAddress as setGlobalWalletAddress } from '@/lib/genlayer';
+import { useWallet } from '@/components/WalletProvider';
 
 export default function SubmitPage() {
-  const [walletAddress, setWalletAddress] = useState<string | null>(() => getWalletAddress());
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
-        const newAddr = accounts[0] || null;
-        setGlobalWalletAddress(newAddr);
-        setWalletAddress(newAddr);
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-
-      return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        }
-      };
-    }
-  }, []);
+  const { address, isInitializing } = useWallet();
 
   return (
     <div className="section">
@@ -80,7 +62,14 @@ export default function SubmitPage() {
           className="card card-body animate-in animate-in-delay-2"
           style={{ padding: '32px' }}
         >
-          <SubmitForm walletAddress={walletAddress} />
+          {isInitializing ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
+              <span className="spinner" style={{ display: 'inline-block', marginBottom: 12 }} />
+              <p>Verifying wallet connection state…</p>
+            </div>
+          ) : (
+            <SubmitForm walletAddress={address} />
+          )}
         </div>
 
         {/* Verification criteria */}

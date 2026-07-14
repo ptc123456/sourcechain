@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import LoadingConsensus from './LoadingConsensus';
 import {
   submitArticle,
@@ -11,7 +10,7 @@ import {
   hashArticle,
   type ArticleStatus,
 } from '@/lib/contracts';
-import { getWalletAddress, getTxExplorerUrl } from '@/lib/genlayer';
+import { getTxExplorerUrl } from '@/lib/genlayer';
 
 interface SubmitFormProps {
   walletAddress: string | null;
@@ -20,7 +19,6 @@ interface SubmitFormProps {
 type FormStage = 'form' | 'submitting' | 'fetching' | 'analyzing' | 'consensus' | 'done' | 'error';
 
 export default function SubmitForm({ walletAddress }: SubmitFormProps) {
-  const router = useRouter();
 
   // Form state
   const [title, setTitle]     = useState('');

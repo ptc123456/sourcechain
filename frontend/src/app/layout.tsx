@@ -3,6 +3,7 @@ import { Outfit, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { WalletProvider } from '@/components/WalletProvider';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -51,10 +52,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#030712" />
       </head>
       <body>
-        <a className="skip-link" href="#main-content">Skip to main content</a>
-        <Navbar />
-        <main id="main-content" tabIndex={-1}>{children}</main>
-        <Footer />
+        <WalletProvider>
+          <a className="skip-link" href="#main-content">Skip to main content</a>
+          <Navbar />
+          <main id="main-content" tabIndex={-1}>{children}</main>
+          <Footer />
+        </WalletProvider>
       </body>
     </html>
   );

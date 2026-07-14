@@ -158,13 +158,6 @@ function getDemoArticles(): ArticleVerification[] {
   return stored ? JSON.parse(stored) : [];
 }
 
-function saveDemoArticle(article: ArticleVerification) {
-  if (typeof window === 'undefined') return;
-  const articles = getDemoArticles();
-  const filtered = articles.filter(a => a.article_id !== article.article_id);
-  localStorage.setItem('sc_demo_articles', JSON.stringify([...filtered, article]));
-}
-
 // ── Helper: call GenLayer contract write ──────────────────────────────────────
 async function glWrite(functionName: string, address: `0x${string}`, args: CalldataEncodable[]): Promise<string> {
   if (!address) {
@@ -198,10 +191,15 @@ async function glWrite(functionName: string, address: `0x${string}`, args: Calld
   return txHash;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function glRead(functionName: string, address: `0x${string}`, args: CalldataEncodable[]): Promise<unknown> {
-  const client = getReadClient();
-  const result = await (client as any).readContract({
+  const client = getReadClient() as unknown as {
+    readContract: (config: {
+      address: `0x${string}`;
+      functionName: string;
+      args: CalldataEncodable[];
+    }) => Promise<unknown>;
+  };
+  const result = await client.readContract({
     address,
     functionName,
     args,

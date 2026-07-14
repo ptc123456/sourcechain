@@ -43,10 +43,7 @@ export default function Navbar() {
 
         {/* Wallet + mobile toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <WalletConnect
-            onConnect={() => undefined}
-            onDisconnect={() => undefined}
-          />
+          <WalletConnect />
 
           {/* Mobile burger */}
           <button
