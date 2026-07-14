@@ -2,13 +2,11 @@
 
 import React, { useState } from 'react';
 import { useWallet } from '@/components/WalletProvider';
-import { shortAddress, fundAccount } from '@/lib/genlayer';
+import { shortAddress } from '@/lib/genlayer';
 
 export default function WalletConnect() {
   const { address, isInitializing, isConnecting, connect, disconnect } = useWallet();
   const [showMenu, setShowMenu] = useState(false);
-  const [funding, setFunding] = useState(false);
-  const [fundMsg, setFundMsg] = useState('');
 
   async function handleConnect() {
     try {
@@ -21,23 +19,6 @@ export default function WalletConnect() {
   async function handleDisconnect() {
     await disconnect();
     setShowMenu(false);
-  }
-
-  async function handleFund() {
-    if (!address) return;
-    setFunding(true);
-    setFundMsg('Requesting GEN…');
-    try {
-      await fundAccount(address, 10);
-      setFundMsg('Funded! +10 GEN');
-      setTimeout(() => setFundMsg(''), 3000);
-    } catch (e) {
-      console.error(e);
-      setFundMsg('Funding failed');
-      setTimeout(() => setFundMsg(''), 3000);
-    } finally {
-      setFunding(false);
-    }
   }
 
   if (isInitializing) {
@@ -110,27 +91,6 @@ export default function WalletConnect() {
             <p className="text-xs text-muted" style={{ marginBottom: 2 }}>Connected wallet</p>
             <p className="font-mono text-sm" style={{ wordBreak: 'break-all' }}>{address}</p>
           </div>
-          
-          <button
-            id="wallet-fund-btn"
-            onClick={handleFund}
-            disabled={funding}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-accent)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontSize: '0.875rem',
-              borderRadius: 'var(--radius-sm)',
-              fontFamily: 'var(--font-sans)',
-              borderBottom: '1px solid var(--glass-border)',
-            }}
-          >
-            {funding ? 'Requesting…' : fundMsg || 'Request Faucet (10 GEN)'}
-          </button>
 
           <button
             id="wallet-disconnect-btn"
