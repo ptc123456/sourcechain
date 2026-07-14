@@ -8,7 +8,7 @@
  * No ABI required — GenLayer encodes calls via RLP, not ABI.
  */
 
-import { getClient, getAccount } from './genlayer';
+import { getClient, getAccount, getWalletAddress } from './genlayer';
 
 // ── Contract Addresses (from .env.local) ─────────────────────────────────────
 export const REGISTRY_ADDRESS = (
@@ -174,14 +174,14 @@ async function glWrite(functionName: string, address: `0x${string}`, args: unkno
   }
 
   const client = getClient();
-  const account = getAccount();
-  if (!account) {
+  const walletAddress = getWalletAddress();
+  if (!walletAddress) {
     throw new Error('Wallet not connected. Please connect your wallet first.');
   }
 
-  // Call writeContract (authenticated contract write)
+  // Call writeContract (authenticated contract write via provider)
   const txHash = await (client as any).writeContract({
-    account,
+    account: walletAddress as `0x${string}`,
     address,
     functionName,
     args,

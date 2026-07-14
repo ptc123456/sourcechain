@@ -6,18 +6,29 @@
 
 import { createClient, createAccount, chains } from 'genlayer-js';
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 // ── Client Singleton ─────────────────────────────────────────────────────────
-let _client: ReturnType<typeof createClient> | null = null;
 let _walletAddress: string | null = null;
 
 export function getClient() {
-  if (!_client) {
-    // Connect to GenLayer Testnet Asimov where SourceChain is deployed
-    _client = createClient({
-      chain: chains.testnetAsimov,
-    });
+  if (typeof window !== 'undefined' && window.ethereum) {
+    const address = getWalletAddress();
+    if (address) {
+      return createClient({
+        chain: chains.testnetAsimov,
+        account: address as `0x${string}`,
+        provider: window.ethereum,
+      });
+    }
   }
-  return _client;
+  return createClient({
+    chain: chains.testnetAsimov,
+  });
 }
 
 export function getWalletAddress(): string | null {
@@ -29,36 +40,59 @@ export function setWalletAddress(address: string | null) {
 }
 
 export function getAccount() {
-  if (typeof window === 'undefined') return undefined;
-  const pk = localStorage.getItem('sc_pk');
-  if (pk) {
-    return createAccount(pk as `0x${string}`);
-  }
+  // getAccount is kept as undefined fallback since we use window.ethereum provider now
   return undefined;
 }
 
 // ── Wallet connect ────────────────────────────────────────────────────────────
-// Creates or restores a local GenLayer account stored in browser localStorage.
+// Connects to MetaMask or another injected EIP-1193 browser wallet.
 export async function connectWallet(): Promise<string> {
   if (typeof window === 'undefined') return '0x0000000000000000000000000000000000000000';
 
-  const stored = localStorage.getItem('sc_wallet');
-  const storedPk = localStorage.getItem('sc_pk');
-  if (stored && storedPk) {
-    _walletAddress = stored;
-    return stored;
+  if (!window.ethereum) {
+    throw new Error('No Ethereum wallet extension detected. Please install MetaMask or another compatible wallet.');
   }
 
-  // Create a fresh keypair for this browser session
-  const account = createAccount();
-  _walletAddress = (account as { address: string }).address;
+  // Request accounts from the browser extension
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
+  if (!accounts || accounts.length === 0) {
+    throw new Error('No accounts found in your wallet extension.');
+  }
 
+  _walletAddress = accounts[0];
   localStorage.setItem('sc_wallet', _walletAddress);
+  localStorage.removeItem('sc_pk'); // Clear any legacy local keypair
 
-  // Persist private key so the same account is reused across refreshes
-  const anyAccount = account as unknown as Record<string, string>;
-  if (anyAccount.privateKey) {
-    localStorage.setItem('sc_pk', anyAccount.privateKey);
+  // Try to switch MetaMask to GenLayer Testnet Asimov network
+  const chain = chains.testnetAsimov;
+  const chainIdHex = `0x${chain.id.toString(16)}`;
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: chainIdHex }],
+    });
+  } catch (switchError: any) {
+    // Code 4902 indicates the chain has not been added to MetaMask
+    if (switchError.code === 4902) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId: chainIdHex,
+              chainName: chain.name,
+              rpcUrls: chain.rpcUrls.default.http,
+              nativeCurrency: chain.nativeCurrency,
+              blockExplorers: chain.blockExplorers ? [chain.blockExplorers.default.url] : undefined,
+            },
+          ],
+        });
+      } catch (addError) {
+        console.error('Failed to add GenLayer network to wallet:', addError);
+      }
+    } else {
+      console.error('Failed to switch to GenLayer network:', switchError);
+    }
   }
 
   return _walletAddress;
