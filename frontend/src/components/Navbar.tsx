@@ -7,7 +7,6 @@ import WalletConnect from './WalletConnect';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [walletAddr, setWalletAddr] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const links = [
@@ -16,11 +15,11 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="navbar" role="navigation" aria-label="Main navigation">
+    <nav className="navbar" aria-label="Main navigation">
       <div className="navbar-inner">
         {/* Logo */}
         <Link href="/" className="navbar-logo" id="logo-link">
-          <div className="logo-icon" aria-hidden="true">⛓</div>
+          <div className="logo-icon" aria-hidden="true">SC</div>
           <span>
             Source<span className="gradient-text">Chain</span>
           </span>
@@ -33,6 +32,7 @@ export default function Navbar() {
               <Link
                 href={l.href}
                 className={pathname === l.href ? 'active' : ''}
+                aria-current={pathname === l.href ? 'page' : undefined}
                 id={`nav-${l.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {l.label}
@@ -44,15 +44,17 @@ export default function Navbar() {
         {/* Wallet + mobile toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <WalletConnect
-            onConnect={addr => setWalletAddr(addr)}
-            onDisconnect={() => setWalletAddr(null)}
+            onConnect={() => undefined}
+            onDisconnect={() => undefined}
           />
 
           {/* Mobile burger */}
           <button
             id="mobile-menu-btn"
             onClick={() => setMobileOpen(v => !v)}
-            aria-label="Toggle menu"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation"
             style={{
               display: 'none',
               background: 'transparent',
@@ -72,6 +74,7 @@ export default function Navbar() {
       {/* Mobile dropdown */}
       {mobileOpen && (
         <div
+          id="mobile-navigation"
           style={{
             borderTop: '1px solid var(--glass-border)',
             padding: '8px 24px 16px',

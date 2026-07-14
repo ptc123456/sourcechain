@@ -73,8 +73,8 @@ export default function HomePage() {
   useEffect(() => {
     async function load() {
       if (!REGISTRY_ADDRESS) {
-        setArticles(MOCK_ARTICLES);
-        setCount(MOCK_ARTICLES.length);
+        setArticles([]);
+        setCount(0);
         setIsDemo(true);
         setLoading(false);
         return;
@@ -100,7 +100,7 @@ export default function HomePage() {
         setArticles(verified);
       } catch (err) {
         console.error('Feed load error:', err);
-        setArticles(MOCK_ARTICLES);
+        setArticles([]);
         setIsDemo(true);
       } finally {
         setLoading(false);
@@ -312,8 +312,8 @@ export default function HomePage() {
             <div className="success-banner mb-6" role="note" id="demo-banner">
               <span>ℹ️</span>
               <p>
-                Demo mode — no contract configured. Deploy to testnet and add your contract
-                addresses to <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8em' }}>.env.local</code> to see real data.
+                Demo mode: no contract is configured, so {MOCK_ARTICLES.length} sample records are hidden rather than presented as on-chain evidence. Add deployed contract
+                addresses to <code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8em' }}>.env.local</code> to load verified data.
               </p>
             </div>
           )}

@@ -51,8 +51,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#030712" />
       </head>
       <body>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
         <Navbar />
-        <main>{children}</main>
+        <main id="main-content" tabIndex={-1}>{children}</main>
         <Footer />
       </body>
     </html>

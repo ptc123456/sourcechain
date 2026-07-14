@@ -2,13 +2,14 @@
  * contracts.ts — Contract interaction helpers for SourceChain
  *
  * Uses genlayer-js GenLayer-specific API:
- *  - client.simulateWriteContract({ address, functionName, args }) → tx hash
+ *  - walletClient.writeContract({ address, functionName, args }) → signed tx hash
  *  - client.readContract({ address, functionName, args })           → result
  *
  * No ABI required — GenLayer encodes calls via RLP, not ABI.
  */
 
-import { getClient, getAccount, getWalletAddress } from './genlayer';
+import { ExecutionResult, TransactionStatus, CalldataEncodable } from 'genlayer-js/types';
+import { getAuthenticatedWriteClient, getReadClient } from './genlayer';
 
 // ── Contract Addresses (from .env.local) ─────────────────────────────────────
 export const REGISTRY_ADDRESS = (
@@ -165,23 +166,18 @@ function saveDemoArticle(article: ArticleVerification) {
 }
 
 // ── Helper: call GenLayer contract write ──────────────────────────────────────
-async function glWrite(functionName: string, address: `0x${string}`, args: unknown[]): Promise<string> {
+async function glWrite(functionName: string, address: `0x${string}`, args: CalldataEncodable[]): Promise<string> {
   if (!address) {
-    console.warn(`[Demo Mode] Simulating write: ${functionName}`);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const randomHash = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    return `0x${randomHash}`;
+    throw new Error(
+      `Cannot execute ${functionName}: the contract address is not configured. ` +
+      'Demo data is read-only; configure the public contract address to submit a real transaction.'
+    );
   }
 
-  const client = getClient();
-  const walletAddress = getWalletAddress();
-  if (!walletAddress) {
-    throw new Error('Wallet not connected. Please connect your wallet first.');
-  }
+  const writeClient = await getAuthenticatedWriteClient();
 
   // Call writeContract (authenticated contract write via provider)
-  const txHash = await (client as any).writeContract({
-    account: walletAddress as `0x${string}`,
+  const txHash = await writeClient.writeContract({
     address,
     functionName,
     args,
@@ -189,30 +185,22 @@ async function glWrite(functionName: string, address: `0x${string}`, args: unkno
   });
 
   // Wait for transaction confirmation
-  const receipt = await (client as any).waitForTransactionReceipt({
+  const receipt = await getReadClient().waitForTransactionReceipt({
     hash: txHash,
-    status: 'FINALIZED',
+    status: TransactionStatus.FINALIZED,
   });
 
   // Check receipt for execution failures
-  if (
-    receipt.status === 'CANCELED' ||
-    receipt.status === 'LEADER_TIMEOUT' ||
-    receipt.status === 'VALIDATORS_TIMEOUT' ||
-    receipt.resultName === 'FAILURE' ||
-    receipt.txExecutionResultName === 'FINISHED_WITH_ERROR'
-  ) {
-    const errorMsg = receipt.data?.error || `Transaction failed with status: ${receipt.statusName || receipt.status}`;
-    throw new Error(errorMsg);
+  if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
+    throw new Error(`Contract transaction did not succeed: ${receipt.txExecutionResultName || receipt.statusName}`);
   }
 
   return txHash;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function glRead(functionName: string, address: `0x${string}`, args: unknown[]): Promise<unknown> {
-  const client = getClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function glRead(functionName: string, address: `0x${string}`, args: CalldataEncodable[]): Promise<unknown> {
+  const client = getReadClient();
   const result = await (client as any).readContract({
     address,
     functionName,
@@ -224,19 +212,7 @@ async function glRead(functionName: string, address: `0x${string}`, args: unknow
 // ── Registry Contract Methods ─────────────────────────────────────────────────
 
 export async function submitArticle(submission: ArticleSubmission): Promise<string> {
-  if (!REGISTRY_ADDRESS) {
-    const mockArticle: ArticleVerification = {
-      article_id: submission.article_id,
-      article_title: submission.article_title,
-      status: 'PENDING',
-      author_address: submission.author_address,
-      verified: false,
-      article_hash: submission.article_hash,
-      verification: null,
-    };
-    saveDemoArticle(mockArticle);
-    return glWrite('submit_article', '' as `0x${string}`, []);
-  }
+  if (!REGISTRY_ADDRESS) return glWrite('submit_article', '' as `0x${string}`, []);
 
   return glWrite('submit_article', REGISTRY_ADDRESS, [
     submission.article_id,
@@ -249,33 +225,7 @@ export async function submitArticle(submission: ArticleSubmission): Promise<stri
 }
 
 export async function verifyArticle(articleId: string): Promise<string> {
-  if (!REGISTRY_ADDRESS) {
-    const demoArticles = getDemoArticles();
-    const found = demoArticles.find(a => a.article_id === articleId);
-    if (found) {
-      // Custom verdict rule: title containing 'fake' or 'reject' fails
-      const isRejected = found.article_title.toLowerCase().includes('fake') || 
-                         found.article_title.toLowerCase().includes('reject');
-      
-      const verdict = isRejected ? 'REJECTED' : 'VERIFIED';
-      found.status = verdict;
-      found.verified = verdict === 'VERIFIED';
-      found.verification = {
-        source_accuracy: isRejected ? 0.35 : 0.94,
-        context_integrity: !isRejected,
-        ai_generated_risk: isRejected ? 0.85 : 0.12,
-        verdict: verdict,
-        reason: isRejected 
-          ? 'Failed citation verification. Multiple sources contradict the core claims of this article.' 
-          : 'All cited facts verified successfully against live news outlets. Low AI footprint detected.',
-        issues_found: isRejected ? ['Core claims contradicted by NASA and Reuters archives', 'Plagiarism risk detected'] : [],
-        sources_checked: 3,
-        sources_ok: isRejected ? 1 : 3,
-      };
-      saveDemoArticle(found);
-    }
-    return glWrite('verify_article', '' as `0x${string}`, []);
-  }
+  if (!REGISTRY_ADDRESS) return glWrite('verify_article', '' as `0x${string}`, []);
 
   return glWrite('verify_article', REGISTRY_ADDRESS, [articleId]);
 }
@@ -325,37 +275,7 @@ export async function challengeArticle(
   challengerAddress: string,
   evidenceUrl: string
 ): Promise<string> {
-  if (!REGISTRY_ADDRESS) {
-    const demoArticles = getDemoArticles();
-    const found = demoArticles.find(a => a.article_id === articleId);
-    if (found) {
-      found.status = 'CHALLENGED';
-      found.verified = false;
-      found.verification = {
-        ...(found.verification || {
-          source_accuracy: 0.9,
-          context_integrity: true,
-          ai_generated_risk: 0.1,
-          verdict: 'VERIFIED',
-          reason: 'Initial verification successful.',
-          issues_found: [],
-        }),
-        challenge: {
-          challenger_address: challengerAddress,
-          evidence_url: evidenceUrl,
-          challenge_result: {
-            challenge_verdict: 'CHALLENGE_UPHELD',
-            evidence_credible: true,
-            new_issues_found: ['The provided evidence URL clearly refutes the article\'s secondary claims.'],
-            reason: 'Evidence credible. The article claims were found to be invalid based on updated evidence.',
-            confidence: 0.95,
-          }
-        }
-      };
-      saveDemoArticle(found);
-    }
-    return glWrite('challenge_article', '' as `0x${string}`, []);
-  }
+  if (!REGISTRY_ADDRESS) return glWrite('challenge_article', '' as `0x${string}`, []);
 
   return glWrite('challenge_article', REGISTRY_ADDRESS, [articleId, challengerAddress, evidenceUrl]);
 }

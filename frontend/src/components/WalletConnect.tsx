@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { loadStoredWallet, connectWallet, disconnectWallet, shortAddress, fundAccount } from '@/lib/genlayer';
+import { checkConnectedWallet, connectWallet, disconnectWallet, shortAddress, fundAccount, setWalletAddress } from '@/lib/genlayer';
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
@@ -17,13 +17,54 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
   const [fundMsg, setFundMsg] = useState('');
 
   useEffect(() => {
-    const stored = loadStoredWallet();
-    if (stored) {
-      setAddress(stored);
-      onConnect?.(stored);
+    let active = true;
+
+    async function initWallet() {
+      const addr = await checkConnectedWallet();
+      if (!active) return;
+      setAddress(addr);
+      if (addr) {
+        onConnect?.(addr);
+      } else {
+        onDisconnect?.();
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    initWallet();
+
+    if (typeof window !== 'undefined' && window.ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (!active) return;
+        if (accounts.length > 0) {
+          const newAddr = accounts[0];
+          setWalletAddress(newAddr);
+          setAddress(newAddr);
+          localStorage.setItem('sc_wallet', newAddr);
+          onConnect?.(newAddr);
+        } else {
+          setWalletAddress(null);
+          setAddress(null);
+          localStorage.removeItem('sc_wallet');
+          onDisconnect?.();
+        }
+      };
+
+      const handleChainChanged = () => {
+        window.location.reload();
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+
+      return () => {
+        active = false;
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+          window.ethereum.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, [onConnect, onDisconnect]);
 
   async function handleConnect() {
     setConnecting(true);
@@ -38,8 +79,8 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
     }
   }
 
-  function handleDisconnect() {
-    disconnectWallet();
+  async function handleDisconnect() {
+    await disconnectWallet();
     setAddress(null);
     setShowMenu(false);
     onDisconnect?.();

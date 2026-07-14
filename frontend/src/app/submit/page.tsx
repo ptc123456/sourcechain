@@ -2,14 +2,39 @@
 
 import React, { useState, useEffect } from 'react';
 import SubmitForm from '@/components/SubmitForm';
-import { loadStoredWallet } from '@/lib/genlayer';
+import { checkConnectedWallet, setWalletAddress as setGlobalWalletAddress } from '@/lib/genlayer';
 
 export default function SubmitPage() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = loadStoredWallet();
-    setWalletAddress(stored);
+    let active = true;
+
+    async function initWallet() {
+      const addr = await checkConnectedWallet();
+      if (!active) return;
+      setWalletAddress(addr);
+    }
+
+    initWallet();
+
+    if (typeof window !== 'undefined' && window.ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (!active) return;
+        const newAddr = accounts[0] || null;
+        setGlobalWalletAddress(newAddr);
+        setWalletAddress(newAddr);
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+
+      return () => {
+        active = false;
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        }
+      };
+    }
   }, []);
 
   return (

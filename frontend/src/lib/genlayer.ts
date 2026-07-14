@@ -4,7 +4,7 @@
  * Contract: 0x9420f93DE811771fC182EcCE03C7a55F90190f43
  */
 
-import { createClient, createAccount, chains } from 'genlayer-js';
+import { createClient, chains } from 'genlayer-js';
 
 declare global {
   interface Window {
@@ -31,17 +31,42 @@ export function getClient() {
   });
 }
 
+/** A provider-free client for reads and transaction polling. */
+export function getReadClient() {
+  return createClient({ chain: chains.testnetAsimov });
+}
+
+/**
+ * Return a client whose account is currently authorised by the injected wallet.
+ * A localStorage address is only a UI hint; it must never be treated as proof that
+ * the user still controls that account.
+ */
+export async function getAuthenticatedWriteClient() {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    throw new Error('No compatible browser wallet detected.');
+  }
+
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+  const address = accounts?.[0];
+  if (!address) {
+    throw new Error('Wallet authorization expired. Please reconnect your wallet.');
+  }
+
+  _walletAddress = address;
+  localStorage.setItem('sc_wallet', address);
+  return createClient({
+    chain: chains.testnetAsimov,
+    account: address as `0x${string}`,
+    provider: window.ethereum,
+  });
+}
+
 export function getWalletAddress(): string | null {
   return _walletAddress;
 }
 
 export function setWalletAddress(address: string | null) {
   _walletAddress = address;
-}
-
-export function getAccount() {
-  // getAccount is kept as undefined fallback since we use window.ethereum provider now
-  return undefined;
 }
 
 // ── Wallet connect ────────────────────────────────────────────────────────────
@@ -112,19 +137,46 @@ export async function fundAccount(address: string, amount: number = 10): Promise
   }
 }
 
-export function disconnectWallet() {
+export async function disconnectWallet(): Promise<void> {
   _walletAddress = null;
   if (typeof window !== 'undefined') {
     localStorage.removeItem('sc_wallet');
     localStorage.removeItem('sc_pk');
+    if (window.ethereum) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }],
+        });
+      } catch (err) {
+        console.warn('wallet_revokePermissions not supported or rejected:', err);
+      }
+    }
   }
 }
 
 export function loadStoredWallet(): string | null {
-  if (typeof window === 'undefined') return null;
-  const addr = localStorage.getItem('sc_wallet');
-  if (addr) _walletAddress = addr;
-  return addr;
+  return _walletAddress;
+}
+
+export async function checkConnectedWallet(): Promise<string | null> {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    _walletAddress = null;
+    return null;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+    if (accounts && accounts.length > 0) {
+      _walletAddress = accounts[0];
+      localStorage.setItem('sc_wallet', _walletAddress);
+      return _walletAddress;
+    }
+  } catch (err) {
+    console.error('Error fetching connected accounts:', err);
+  }
+  _walletAddress = null;
+  localStorage.removeItem('sc_wallet');
+  return null;
 }
 
 // ── Address Helpers ──────────────────────────────────────────────────────────
