@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { loadStoredWallet, connectWallet, disconnectWallet, shortAddress } from '@/lib/genlayer';
+import { loadStoredWallet, connectWallet, disconnectWallet, shortAddress, fundAccount } from '@/lib/genlayer';
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
@@ -13,6 +13,8 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [funding, setFunding] = useState(false);
+  const [fundMsg, setFundMsg] = useState('');
 
   useEffect(() => {
     const stored = loadStoredWallet();
@@ -41,6 +43,23 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
     setAddress(null);
     setShowMenu(false);
     onDisconnect?.();
+  }
+
+  async function handleFund() {
+    if (!address) return;
+    setFunding(true);
+    setFundMsg('Requesting GEN…');
+    try {
+      await fundAccount(address, 10);
+      setFundMsg('Funded! +10 GEN');
+      setTimeout(() => setFundMsg(''), 3000);
+    } catch (e) {
+      console.error(e);
+      setFundMsg('Funding failed');
+      setTimeout(() => setFundMsg(''), 3000);
+    } finally {
+      setFunding(false);
+    }
   }
 
   if (!address) {
@@ -99,6 +118,28 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
             <p className="text-xs text-muted" style={{ marginBottom: 2 }}>Connected wallet</p>
             <p className="font-mono text-sm" style={{ wordBreak: 'break-all' }}>{address}</p>
           </div>
+          
+          <button
+            id="wallet-fund-btn"
+            onClick={handleFund}
+            disabled={funding}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-accent)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontSize: '0.875rem',
+              borderRadius: 'var(--radius-sm)',
+              fontFamily: 'var(--font-sans)',
+              borderBottom: '1px solid var(--glass-border)',
+            }}
+          >
+            {funding ? 'Requesting…' : fundMsg || 'Request Faucet (10 GEN)'}
+          </button>
+
           <button
             id="wallet-disconnect-btn"
             onClick={handleDisconnect}

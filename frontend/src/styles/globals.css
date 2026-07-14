@@ -6,32 +6,32 @@
 
 
 :root {
-  /* Premium Dark Palette */
-  --bg-void:        #0b0c10;
-  --bg-dark:        #111218;
-  --bg-surface:     #161722;
-  --bg-elevated:    #1d1f2e;
-  --bg-card:        rgba(15, 16, 22, 0.65);
+  /* Curated HSL Sleek Dark Palette */
+  --bg-void:        hsl(224, 25%, 5%);     /* Deep void background */
+  --bg-dark:        hsl(224, 20%, 8%);     /* Dark layout background */
+  --bg-surface:     hsl(223, 16%, 12%);    /* Card/surface background */
+  --bg-elevated:    hsl(223, 14%, 18%);    /* Popover/menu background */
+  --bg-card:        hsla(224, 20%, 8%, 0.65);
 
-  /* Curated Indigo-Cobalt Gradients */
-  --brand-start:    #2563eb;
-  --brand-mid:      #3b82f6;
-  --brand-end:      #1d4ed8;
-  --brand-glow:     rgba(37, 99, 235, 0.15);
+  /* Curated HSL Indigo-Cobalt Gradients */
+  --brand-start:    hsl(221, 83%, 53%);    /* #2563eb */
+  --brand-mid:      hsl(217, 91%, 60%);    /* #3b82f6 */
+  --brand-end:      hsl(224, 76%, 48%);    /* #1d4ed8 */
+  --brand-glow:     hsla(221, 83%, 53%, 0.15);
 
-  /* Status Colors */
-  --verified:       #10b981;
-  --verified-glow:  rgba(16, 185, 129, 0.08);
-  --rejected:       #ef4444;
-  --rejected-glow:  rgba(239, 68, 68, 0.08);
-  --challenged:     #f59e0b;
-  --pending:        #2563eb;
+  /* HSL Status Colors */
+  --verified:       hsl(162, 84%, 40%);    /* Vibrant emerald green */
+  --verified-glow:  hsla(162, 84%, 40%, 0.08);
+  --rejected:       hsl(0, 84%, 60%);      /* Elegant rose/coral red */
+  --rejected-glow:  hsla(0, 84%, 60%, 0.08);
+  --challenged:     hsl(38, 92%, 50%);     /* Warm amber orange */
+  --pending:        hsl(221, 83%, 53%);
 
-  /* Typography Colors */
-  --text-primary:   #f5f5f7;
-  --text-secondary: #8e8e93;
-  --text-muted:     #4b4b4e;
-  --text-accent:    #3b82f6;
+  /* HSL Typography Colors */
+  --text-primary:   hsl(240, 10%, 96%);    /* Sleek off-white */
+  --text-secondary: hsl(240, 5%, 70%);     /* Soft grey */
+  --text-muted:     hsl(240, 4%, 40%);     /* Muted grey */
+  --text-accent:    hsl(217, 91%, 60%);
 
   /* Refined Steel Outlines */
   --border-subtle:  rgba(37, 99, 235, 0.12);

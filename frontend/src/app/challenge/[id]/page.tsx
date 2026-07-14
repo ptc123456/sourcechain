@@ -88,29 +88,20 @@ export default function ChallengePage() {
       setElapsed(0);
       const timer = setInterval(() => setElapsed(e => e + 1), 1000);
 
-      const tx = await challengeArticle(articleId, walletAddress, evidenceUrl);
-      setTxHash(tx);
+      try {
+        const tx = await challengeArticle(articleId, walletAddress, evidenceUrl);
+        setTxHash(tx);
 
-      // Poll for result
-      let resolved = false;
-      let retries  = 0;
-      while (!resolved && retries < 50) {
-        await new Promise(r => setTimeout(r, 3000));
-        retries++;
-        try {
-          const updated = await getVerification(articleId);
-          if (updated.status !== 'VERIFIED') {
-            setChallengeVerdict('CHALLENGE_UPHELD');
-            resolved = true;
-          } else if (retries >= 10) {
-            // If still VERIFIED after polling, challenge was rejected
-            setChallengeVerdict('CHALLENGE_REJECTED');
-            resolved = true;
-          }
-        } catch { /* keep polling */ }
+        const updated = await getVerification(articleId);
+        if (updated.status === 'CHALLENGED') {
+          setChallengeVerdict('CHALLENGE_UPHELD');
+        } else {
+          setChallengeVerdict('CHALLENGE_REJECTED');
+        }
+      } finally {
+        clearInterval(timer);
       }
 
-      clearInterval(timer);
       setStage('done');
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Challenge failed');

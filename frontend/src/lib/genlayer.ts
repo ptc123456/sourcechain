@@ -28,14 +28,23 @@ export function setWalletAddress(address: string | null) {
   _walletAddress = address;
 }
 
+export function getAccount() {
+  if (typeof window === 'undefined') return undefined;
+  const pk = localStorage.getItem('sc_pk');
+  if (pk) {
+    return createAccount(pk as `0x${string}`);
+  }
+  return undefined;
+}
+
 // ── Wallet connect ────────────────────────────────────────────────────────────
 // Creates or restores a local GenLayer account stored in browser localStorage.
-// For production: integrate MetaMask/WalletConnect by passing provider to createClient.
 export async function connectWallet(): Promise<string> {
   if (typeof window === 'undefined') return '0x0000000000000000000000000000000000000000';
 
   const stored = localStorage.getItem('sc_wallet');
-  if (stored) {
+  const storedPk = localStorage.getItem('sc_pk');
+  if (stored && storedPk) {
     _walletAddress = stored;
     return stored;
   }
@@ -53,6 +62,20 @@ export async function connectWallet(): Promise<string> {
   }
 
   return _walletAddress;
+}
+
+export async function fundAccount(address: string, amount: number = 10): Promise<string> {
+  const client = getClient();
+  try {
+    const txHash = await (client as any).request({
+      method: 'sim_fundAccount',
+      params: [address as `0x${string}`, amount],
+    });
+    return txHash as string;
+  } catch (error) {
+    console.error('Funding failed:', error);
+    throw error;
+  }
 }
 
 export function disconnectWallet() {

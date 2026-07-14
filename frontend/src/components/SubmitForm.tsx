@@ -100,36 +100,28 @@ export default function SubmitForm({ walletAddress }: SubmitFormProps) {
       setStage('fetching');
       const timer = startElapsedTimer();
 
-      const verifyTx = await verifyArticle(id);
-      setVerifyTxHash(verifyTx);
-      setStage('analyzing');
+      // Automatically advance UX steps while waiting for real on-chain transaction consensus
+      const progressInterval = setInterval(() => {
+        setStage(currentStage => {
+          if (currentStage === 'fetching') return 'analyzing';
+          if (currentStage === 'analyzing') return 'consensus';
+          return currentStage;
+        });
+      }, 8000);
 
-      // ── Step 3: Poll for result ───────────────────────────
+      try {
+        const verifyTx = await verifyArticle(id);
+        setVerifyTxHash(verifyTx);
+      } finally {
+        clearInterval(progressInterval);
+      }
+
+      // ── Step 3: Complete ─────────────────────────────────
       setStage('consensus');
-
-      let resolved = false;
-      let retries  = 0;
-      const maxRetries = 50;
-
-      while (!resolved && retries < maxRetries) {
-        await new Promise(r => setTimeout(r, 3000));
-        retries++;
-
-        try {
-          const status = await getArticleStatus(id);
-          if (status !== 'PENDING') {
-            setFinalStatus(status);
-            stopElapsedTimer(timer);
-            setStage('done');
-            resolved = true;
-          }
-        } catch { /* keep polling */ }
-      }
-
-      if (!resolved) {
-        stopElapsedTimer(timer);
-        throw new Error('Verification timed out. The article may still be processing — check its status later.');
-      }
+      const status = await getArticleStatus(id);
+      setFinalStatus(status);
+      stopElapsedTimer(timer);
+      setStage('done');
     } catch (err: unknown) {
       stopElapsedTimer(elapsedTimer);
       setErrorMsg(err instanceof Error ? err.message : 'An unexpected error occurred.');

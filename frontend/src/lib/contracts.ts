@@ -8,7 +8,7 @@
  * No ABI required — GenLayer encodes calls via RLP, not ABI.
  */
 
-import { getClient } from './genlayer';
+import { getClient, getAccount } from './genlayer';
 
 // ── Contract Addresses (from .env.local) ─────────────────────────────────────
 export const REGISTRY_ADDRESS = (
@@ -92,19 +92,121 @@ export async function hashArticle(text: string): Promise<string> {
   return `sha256:${hashHex}`;
 }
 
+// ── Demo Mode Mock Storage & Data ─────────────────────────────────────────────
+
+const MOCK_ARTICLES_FALLBACK: ArticleVerification[] = [
+  {
+    article_id: 'demo-001',
+    article_title: 'Record Arctic Ice Melt Confirmed by Multiple Research Institutions',
+    status: 'VERIFIED',
+    author_address: '0xDemoAuthor123456789ABCDEF',
+    verified: true,
+    article_hash: 'sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+    verification: {
+      source_accuracy: 0.92,
+      context_integrity: true,
+      ai_generated_risk: 0.15,
+      verdict: 'VERIFIED',
+      reason: 'All cited facts confirmed in NASA and NSIDC sources. Clear human authorship detected.',
+      issues_found: [],
+      sources_checked: 3,
+      sources_ok: 3,
+    },
+  },
+  {
+    article_id: 'demo-002',
+    article_title: 'New COVID Variant Study: What the Data Really Shows',
+    status: 'VERIFIED',
+    author_address: '0xDemoAuthor987654321FEDCBA',
+    verified: true,
+    article_hash: 'sha256:b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3',
+    verification: {
+      source_accuracy: 0.88,
+      context_integrity: true,
+      ai_generated_risk: 0.22,
+      verdict: 'VERIFIED',
+      reason: 'WHO and peer-reviewed sources support all key claims. Some speculative framing noted.',
+      issues_found: ['Minor speculative framing in conclusion section'],
+      sources_checked: 2,
+      sources_ok: 2,
+    },
+  },
+  {
+    article_id: 'demo-003',
+    article_title: 'Tech Giant Earnings Report: Breaking Down the Actual Numbers',
+    status: 'VERIFIED',
+    author_address: '0xDemoAuthor555666777888ABC',
+    verified: true,
+    article_hash: 'sha256:c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4',
+    verification: {
+      source_accuracy: 0.95,
+      context_integrity: true,
+      ai_generated_risk: 0.08,
+      verdict: 'VERIFIED',
+      reason: 'Official SEC filings and company press releases confirm all financial figures.',
+      issues_found: [],
+      sources_checked: 3,
+      sources_ok: 3,
+    },
+  },
+];
+
+function getDemoArticles(): ArticleVerification[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem('sc_demo_articles');
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveDemoArticle(article: ArticleVerification) {
+  if (typeof window === 'undefined') return;
+  const articles = getDemoArticles();
+  const filtered = articles.filter(a => a.article_id !== article.article_id);
+  localStorage.setItem('sc_demo_articles', JSON.stringify([...filtered, article]));
+}
+
 // ── Helper: call GenLayer contract write ──────────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function glWrite(functionName: string, address: `0x${string}`, args: unknown[]): Promise<string> {
+  if (!address) {
+    console.warn(`[Demo Mode] Simulating write: ${functionName}`);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const randomHash = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    return `0x${randomHash}`;
+  }
+
   const client = getClient();
-  // simulateWriteContract is GenLayer's own write method (no ABI required)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await (client as any).simulateWriteContract({
+  const account = getAccount();
+  if (!account) {
+    throw new Error('Wallet not connected. Please connect your wallet first.');
+  }
+
+  // Call writeContract (authenticated contract write)
+  const txHash = await (client as any).writeContract({
+    account,
     address,
     functionName,
     args,
+    value: 0n,
   });
-  // Returns hash string
-  return result as string;
+
+  // Wait for transaction confirmation
+  const receipt = await (client as any).waitForTransactionReceipt({
+    hash: txHash,
+    status: 'FINALIZED',
+  });
+
+  // Check receipt for execution failures
+  if (
+    receipt.status === 'CANCELED' ||
+    receipt.status === 'LEADER_TIMEOUT' ||
+    receipt.status === 'VALIDATORS_TIMEOUT' ||
+    receipt.resultName === 'FAILURE' ||
+    receipt.txExecutionResultName === 'FINISHED_WITH_ERROR'
+  ) {
+    const errorMsg = receipt.data?.error || `Transaction failed with status: ${receipt.statusName || receipt.status}`;
+    throw new Error(errorMsg);
+  }
+
+  return txHash;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,7 +224,19 @@ async function glRead(functionName: string, address: `0x${string}`, args: unknow
 // ── Registry Contract Methods ─────────────────────────────────────────────────
 
 export async function submitArticle(submission: ArticleSubmission): Promise<string> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured. Set NEXT_PUBLIC_REGISTRY_ADDRESS in .env.local');
+  if (!REGISTRY_ADDRESS) {
+    const mockArticle: ArticleVerification = {
+      article_id: submission.article_id,
+      article_title: submission.article_title,
+      status: 'PENDING',
+      author_address: submission.author_address,
+      verified: false,
+      article_hash: submission.article_hash,
+      verification: null,
+    };
+    saveDemoArticle(mockArticle);
+    return glWrite('submit_article', '' as `0x${string}`, []);
+  }
 
   return glWrite('submit_article', REGISTRY_ADDRESS, [
     submission.article_id,
@@ -135,24 +249,73 @@ export async function submitArticle(submission: ArticleSubmission): Promise<stri
 }
 
 export async function verifyArticle(articleId: string): Promise<string> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured');
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    const found = demoArticles.find(a => a.article_id === articleId);
+    if (found) {
+      // Custom verdict rule: title containing 'fake' or 'reject' fails
+      const isRejected = found.article_title.toLowerCase().includes('fake') || 
+                         found.article_title.toLowerCase().includes('reject');
+      
+      const verdict = isRejected ? 'REJECTED' : 'VERIFIED';
+      found.status = verdict;
+      found.verified = verdict === 'VERIFIED';
+      found.verification = {
+        source_accuracy: isRejected ? 0.35 : 0.94,
+        context_integrity: !isRejected,
+        ai_generated_risk: isRejected ? 0.85 : 0.12,
+        verdict: verdict,
+        reason: isRejected 
+          ? 'Failed citation verification. Multiple sources contradict the core claims of this article.' 
+          : 'All cited facts verified successfully against live news outlets. Low AI footprint detected.',
+        issues_found: isRejected ? ['Core claims contradicted by NASA and Reuters archives', 'Plagiarism risk detected'] : [],
+        sources_checked: 3,
+        sources_ok: isRejected ? 1 : 3,
+      };
+      saveDemoArticle(found);
+    }
+    return glWrite('verify_article', '' as `0x${string}`, []);
+  }
+
   return glWrite('verify_article', REGISTRY_ADDRESS, [articleId]);
 }
 
 export async function getVerification(articleId: string): Promise<ArticleVerification> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured');
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    const found = demoArticles.find(a => a.article_id === articleId);
+    if (found) return found;
+    
+    const mock = MOCK_ARTICLES_FALLBACK.find(a => a.article_id === articleId);
+    if (mock) return mock;
+
+    throw new Error('Article not found (Demo Mode)');
+  }
+
   const result = await glRead('get_verification', REGISTRY_ADDRESS, [articleId]);
   return parseJsonResult<ArticleVerification>(result);
 }
 
 export async function getAllVerified(): Promise<string[]> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured');
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    return [
+      ...demoArticles.filter(a => a.status === 'VERIFIED').map(a => a.article_id),
+      ...MOCK_ARTICLES_FALLBACK.map(a => a.article_id),
+    ];
+  }
+
   const result = await glRead('get_all_verified', REGISTRY_ADDRESS, []);
   return parseJsonResult<string[]>(result);
 }
 
 export async function getArticleStatus(articleId: string): Promise<ArticleStatus> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured');
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    const found = demoArticles.find(a => a.article_id === articleId);
+    return found ? found.status : 'NOT_FOUND';
+  }
+
   const result = await glRead('get_article_status', REGISTRY_ADDRESS, [articleId]);
   return (result as string) as ArticleStatus;
 }
@@ -162,12 +325,47 @@ export async function challengeArticle(
   challengerAddress: string,
   evidenceUrl: string
 ): Promise<string> {
-  if (!REGISTRY_ADDRESS) throw new Error('Registry contract not configured');
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    const found = demoArticles.find(a => a.article_id === articleId);
+    if (found) {
+      found.status = 'CHALLENGED';
+      found.verified = false;
+      found.verification = {
+        ...(found.verification || {
+          source_accuracy: 0.9,
+          context_integrity: true,
+          ai_generated_risk: 0.1,
+          verdict: 'VERIFIED',
+          reason: 'Initial verification successful.',
+          issues_found: [],
+        }),
+        challenge: {
+          challenger_address: challengerAddress,
+          evidence_url: evidenceUrl,
+          challenge_result: {
+            challenge_verdict: 'CHALLENGE_UPHELD',
+            evidence_credible: true,
+            new_issues_found: ['The provided evidence URL clearly refutes the article\'s secondary claims.'],
+            reason: 'Evidence credible. The article claims were found to be invalid based on updated evidence.',
+            confidence: 0.95,
+          }
+        }
+      };
+      saveDemoArticle(found);
+    }
+    return glWrite('challenge_article', '' as `0x${string}`, []);
+  }
+
   return glWrite('challenge_article', REGISTRY_ADDRESS, [articleId, challengerAddress, evidenceUrl]);
 }
 
 export async function getSubmissionCount(): Promise<number> {
-  if (!REGISTRY_ADDRESS) return 0;
+  if (!REGISTRY_ADDRESS) {
+    const demoArticles = getDemoArticles();
+    return MOCK_ARTICLES_FALLBACK.length + demoArticles.length;
+  }
+
   const result = await glRead('get_submission_count', REGISTRY_ADDRESS, []);
   return Number(result);
 }
@@ -175,7 +373,9 @@ export async function getSubmissionCount(): Promise<number> {
 // ── Treasury Contract Methods ─────────────────────────────────────────────────
 
 export async function depositStake(authorAddress: string, amount: number): Promise<string> {
-  if (!TREASURY_ADDRESS) throw new Error('Treasury contract not configured');
+  if (!TREASURY_ADDRESS) {
+    return glWrite('deposit_stake', '' as `0x${string}`, []);
+  }
   return glWrite('deposit_stake', TREASURY_ADDRESS, [authorAddress, amount]);
 }
 

@@ -80,9 +80,9 @@ export default function ArticlePage() {
       <div className="section">
         <div className="container" style={{ maxWidth: 760, textAlign: 'center' }}>
           <p style={{ fontSize: '3rem' }}>🔍</p>
-          <h2 style={{ margin: '16px 0 8px' }}>Article Not Found</h2>
+          <h1 style={{ margin: '16px 0 8px', fontSize: '2rem' }}>Article Not Found</h1>
           <p className="text-muted" style={{ marginBottom: 24 }}>{error || 'This article ID does not exist on-chain.'}</p>
-          <Link href="/" className="btn btn-secondary">← Back to Feed</Link>
+          <Link href="/" className="btn btn-secondary" id="not-found-back-btn">← Back to Feed</Link>
         </div>
       </div>
     );
