@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import LoadingConsensus from '@/components/LoadingConsensus';
 import { challengeArticle, getVerification, type ArticleVerification, REGISTRY_ADDRESS } from '@/lib/contracts';
-import { checkConnectedWallet, getTxExplorerUrl, setWalletAddress as setGlobalWalletAddress } from '@/lib/genlayer';
+import { getTxExplorerUrl, getWalletAddress, setWalletAddress as setGlobalWalletAddress } from '@/lib/genlayer';
 
 type ChallengeStage = 'form' | 'processing' | 'done' | 'error';
 
@@ -15,7 +15,7 @@ export default function ChallengePage() {
 
   const [article, setArticle]         = useState<ArticleVerification | null>(null);
   const [loadingArticle, setLoadingArticle] = useState(true);
-  const [walletAddress, setWalletAddress]   = useState<string | null>(null);
+  const [walletAddress, setWalletAddress]   = useState<string | null>(() => getWalletAddress());
 
   const [evidenceUrl, setEvidenceUrl]       = useState('');
   const [stage, setStage]                   = useState<ChallengeStage>('form');
@@ -25,19 +25,8 @@ export default function ChallengePage() {
   const [elapsed, setElapsed]               = useState(0);
 
   useEffect(() => {
-    let active = true;
-
-    async function initWallet() {
-      const addr = await checkConnectedWallet();
-      if (!active) return;
-      setWalletAddress(addr);
-    }
-
-    initWallet();
-
     if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
-        if (!active) return;
         const newAddr = accounts[0] || null;
         setGlobalWalletAddress(newAddr);
         setWalletAddress(newAddr);
@@ -46,7 +35,6 @@ export default function ChallengePage() {
       window.ethereum.on('accountsChanged', handleAccountsChanged);
 
       return () => {
-        active = false;
         if (window.ethereum.removeListener) {
           window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
         }

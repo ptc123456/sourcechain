@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { checkConnectedWallet, connectWallet, disconnectWallet, shortAddress, fundAccount, setWalletAddress } from '@/lib/genlayer';
+import { connectWallet, disconnectWallet, shortAddress, fundAccount, getWalletAddress, setWalletAddress } from '@/lib/genlayer';
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
@@ -10,43 +9,30 @@ interface WalletConnectProps {
 }
 
 export default function WalletConnect({ onConnect, onDisconnect }: WalletConnectProps) {
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(() => getWalletAddress());
   const [connecting, setConnecting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [funding, setFunding] = useState(false);
   const [fundMsg, setFundMsg] = useState('');
 
   useEffect(() => {
-    let active = true;
-
-    async function initWallet() {
-      const addr = await checkConnectedWallet();
-      if (!active) return;
-      setAddress(addr);
-      if (addr) {
-        onConnect?.(addr);
-      } else {
-        onDisconnect?.();
-      }
-    }
-
-    initWallet();
-
     if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
-        if (!active) return;
-        if (accounts.length > 0) {
-          const newAddr = accounts[0];
-          setWalletAddress(newAddr);
-          setAddress(newAddr);
-          localStorage.setItem('sc_wallet', newAddr);
-          onConnect?.(newAddr);
-        } else {
-          setWalletAddress(null);
-          setAddress(null);
-          localStorage.removeItem('sc_wallet');
-          onDisconnect?.();
-        }
+        setAddress(current => {
+          if (accounts.length > 0 && current) {
+            const newAddr = accounts[0];
+            setWalletAddress(newAddr);
+            localStorage.setItem('sc_wallet', newAddr);
+            onConnect?.(newAddr);
+            return newAddr;
+          } else if (accounts.length === 0) {
+            setWalletAddress(null);
+            localStorage.removeItem('sc_wallet');
+            onDisconnect?.();
+            return null;
+          }
+          return current;
+        });
       };
 
       const handleChainChanged = () => {
@@ -57,7 +43,6 @@ export default function WalletConnect({ onConnect, onDisconnect }: WalletConnect
       window.ethereum.on('chainChanged', handleChainChanged);
 
       return () => {
-        active = false;
         if (window.ethereum.removeListener) {
           window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
           window.ethereum.removeListener('chainChanged', handleChainChanged);

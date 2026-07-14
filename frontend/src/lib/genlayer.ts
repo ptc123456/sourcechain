@@ -155,30 +155,6 @@ export async function disconnectWallet(): Promise<void> {
   }
 }
 
-export function loadStoredWallet(): string | null {
-  return _walletAddress;
-}
-
-export async function checkConnectedWallet(): Promise<string | null> {
-  if (typeof window === 'undefined' || !window.ethereum) {
-    _walletAddress = null;
-    return null;
-  }
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
-    if (accounts && accounts.length > 0) {
-      _walletAddress = accounts[0];
-      localStorage.setItem('sc_wallet', _walletAddress);
-      return _walletAddress;
-    }
-  } catch (err) {
-    console.error('Error fetching connected accounts:', err);
-  }
-  _walletAddress = null;
-  localStorage.removeItem('sc_wallet');
-  return null;
-}
-
 // ── Address Helpers ──────────────────────────────────────────────────────────
 export function shortAddress(address: string): string {
   if (!address || address.length < 10) return address;
